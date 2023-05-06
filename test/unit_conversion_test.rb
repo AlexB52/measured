@@ -42,3 +42,28 @@ class Measured::UnitConversionTest < ActiveSupport::TestCase
     assert_nil Measured::UnitConversion.new(nil).inverse_amount
   end
 end
+
+class Measured::UnitConversionProcValueTest < ActiveSupport::TestCase
+  setup do
+    @unit_conversion = Measured::UnitConversion.new([proc { |x| x * Rational(10, 1) }, "sweets"])
+  end
+
+  test "#initialize parses out the unit and the number part" do
+    assert_equal 10, @unit_conversion.amount.call(1)
+    assert_equal "sweets", @unit_conversion.unit
+  end
+
+  test "#to_s returns an expected string" do
+    assert_nil @unit_conversion.to_s
+    unit_conversion = Measured::UnitConversion.new([proc { |x| x * Rational(10, 1) }, "sweets"], conversion_string: '10 sweets')
+    assert_equal '10 sweets', unit_conversion.to_s
+  end
+
+  test "#inverse_amount returns 1/amount" do
+    assert_equal 0.1, @unit_conversion.inverse_amount.call(1)
+  end
+
+  test "#inverse_amount handles nil for base unit" do
+    assert_nil Measured::UnitConversion.new(nil).inverse_amount
+  end
+end
