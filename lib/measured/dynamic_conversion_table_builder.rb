@@ -52,7 +52,12 @@ class Measured::DynamicConversionTableBuilder
   def find_direct_conversion_cached(to:, from:)
     @direct_conversion_cache ||= {}
     @direct_conversion_cache[to] ||= {}
-    @direct_conversion_cache[to][from] ||= find_direct_conversion(to: to, from: from)
+
+    if @direct_conversion_cache[to].key?(from)
+       @direct_conversion_cache[to][from]
+    else
+      @direct_conversion_cache[to][from] = find_direct_conversion(to: to, from: from)
+    end
   end
 
   def find_direct_conversion(to:, from:)
