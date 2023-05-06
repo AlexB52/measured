@@ -1,9 +1,11 @@
 # frozen_string_literal: true
 class Measured::DynamicConversionTableBuilder
+  SELF_CONVERSION = ->(x) { x * Rational(1, 1) }
+
   attr_reader :units
 
   def initialize(units, cache: nil)
-    @units = units
+    @units = units.map!(&:to_dynamic)
     cache ||= { class: Measured::Cache::Null }
     @cache = cache[:class].new(*cache[:args])
   end
@@ -27,8 +29,7 @@ class Measured::DynamicConversionTableBuilder
     validate_no_cycles
 
     units.map(&:name).each_with_object({}) do |to_unit, table|
-      to_table = { to_unit => ->(x) { x * Rational(1, 1) } }
-
+      to_table = { to_unit => SELF_CONVERSION }
       table.each do |from_unit, from_table|
         conversion, inverse_conversion = find_conversion(to: from_unit, from: to_unit)
 
@@ -41,7 +42,7 @@ class Measured::DynamicConversionTableBuilder
   end
 
   def find_conversion(to:, from:)
-    conversion = find_direct_conversion_cached(to: to, from: from) # || find_tree_traversal_conversion(to: to, from: from)
+    conversion = find_direct_conversion_cached(to: to, from: from) || find_tree_traversal_conversion(to: to, from: from)
 
     raise Measured::MissingConversionPath.new(from, to) unless conversion
 
@@ -51,12 +52,7 @@ class Measured::DynamicConversionTableBuilder
   def find_direct_conversion_cached(to:, from:)
     @direct_conversion_cache ||= {}
     @direct_conversion_cache[to] ||= {}
-
-    if @direct_conversion_cache[to].key?(from)
-       @direct_conversion_cache[to][from]
-    else
-      @direct_conversion_cache[to][from] = find_direct_conversion(to: to, from: from)
-    end
+    @direct_conversion_cache[to][from] ||= find_direct_conversion(to: to, from: from)
   end
 
   def find_direct_conversion(to:, from:)
@@ -67,24 +63,27 @@ class Measured::DynamicConversionTableBuilder
         return [unit.inverse_conversion_amount, unit.conversion_amount]
       end
     end
+    nil
   end
 
   def find_tree_traversal_conversion(to:, from:)
-    traverse(from: from, to: to, units_remaining: units.map(&:name), amount: 1)
+    traverse(from: from, to: to, units_remaining: units.map(&:name), amount: ->(x) { x }, inverse_amount: ->(x) { x })
   end
 
-  def traverse(from:, to:, units_remaining:, amount:)
+  def traverse(from:, to:, units_remaining:, amount:, inverse_amount:)
     units_remaining = units_remaining - [from]
 
     units_remaining.each do |name|
-      conversion = find_direct_conversion_cached(from: from, to: name)
+      conversion, inverse_conversion = find_direct_conversion_cached(from: from, to: name)
 
       if conversion
-        new_amount = amount * conversion
+        new_amount = ->(x) { conversion.call amount.call(x) }
+        new_inverse_amount = ->(x) { inverse_amount.call inverse_conversion.call(x) }
+
         if name == to
-          return new_amount
+          return [new_amount, new_inverse_amount]
         else
-          result = traverse(from: name, to: to, units_remaining: units_remaining, amount: new_amount)
+          result = traverse(from: name, to: to, units_remaining: units_remaining, amount: new_amount, inverse_amount: new_inverse_amount)
           return result if result
         end
       end

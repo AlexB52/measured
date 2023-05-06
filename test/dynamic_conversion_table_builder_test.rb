@@ -1,191 +1,42 @@
 # frozen_string_literal: true
 require "test_helper"
 
-# class Measured::DynamicConversionTableBuilderTest < ActiveSupport::TestCase
-#   test "#initialize creates a new object with the units" do
-#     units = [Measured::Unit.new(:test)]
-
-#     assert_equal units, Measured::ConversionTableBuilder.new(units).units
-#   end
-
-#   test "#to_h should return a hash for the simple case" do
-#     conversion_table = Measured::ConversionTableBuilder.new([Measured::Unit.new(:test)]).to_h
-
-#     expected = {
-#       "test" => {"test" => Rational(1, 1)}
-#     }
-
-#     assert_equal expected, conversion_table
-#     assert_instance_of Rational, conversion_table.values.first.values.first
-#   end
-
-#   test "#to_h returns expected nested hashes with BigDecimal conversion factors in a tiny data set" do
-#     conversion_table = Measured::ConversionTableBuilder.new([
-#       Measured::Unit.new(:m),
-#       Measured::Unit.new(:cm, value: "0.01 m"),
-#     ]).to_h
-
-#     expected = {
-#       "m" => {
-#         "m" => Rational(1, 1),
-#         "cm" => Rational(100, 1),
-#       },
-#       "cm" => {
-#         "m" => Rational(1, 100),
-#         "cm" => Rational(1, 1),
-#       }
-#     }
-
-#     assert_equal expected, conversion_table
-
-#     conversion_table.values.map(&:values).flatten.each do |value|
-#       assert_instance_of Rational, value
-#     end
-#   end
-
-#   test "#to_h returns expected nested hashes factors" do
-#     conversion_table = Measured::ConversionTableBuilder.new([
-#       Measured::Unit.new(:m),
-#       Measured::Unit.new(:cm, value: "0.01 m"),
-#       Measured::Unit.new(:mm, value: "0.001 m"),
-#     ]).to_h
-
-#     expected = {
-#       "m" => {
-#         "m" => Rational(1, 1),
-#         "cm" => Rational(100, 1),
-#         "mm" => Rational(1000, 1),
-#       },
-#       "cm" => {
-#         "m" => Rational(1, 100),
-#         "cm" => Rational(1, 1),
-#         "mm" => Rational(10, 1),
-#       },
-#       "mm" => {
-#         "m" => Rational(1, 1000),
-#         "cm" => Rational(1, 10),
-#         "mm" => Rational(1, 1),
-#       }
-#     }
-
-#     assert_equal expected, conversion_table
-
-#     conversion_table.values.map(&:values).flatten.each do |value|
-#       assert_instance_of Rational, value
-#     end
-#   end
-
-#   test "#to_h returns expected nested hashes in an indrect path" do
-#     conversion_table = Measured::ConversionTableBuilder.new([
-#       Measured::Unit.new(:mm),
-#       Measured::Unit.new(:cm, value: "10 mm"),
-#       Measured::Unit.new(:dm, value: "10 cm"),
-#       Measured::Unit.new(:m, value: "10 dm"),
-#     ]).to_h
-
-#     expected = {
-#       "m" => {
-#         "m" => Rational(1, 1),
-#         "dm" => Rational(10, 1),
-#         "cm" => Rational(100, 1),
-#         "mm" => Rational(1000, 1),
-#       },
-#       "cm" => {
-#         "m" => Rational(1, 100),
-#         "dm" => Rational(1, 10),
-#         "cm" => Rational(1, 1),
-#         "mm" => Rational(10, 1),
-#       },
-#       "dm" => {
-#         "m" => Rational(1, 10),
-#         "cm" => Rational(10, 1),
-#         "dm" => Rational(1, 1),
-#         "mm" => Rational(100, 1),
-#       },
-#       "mm" => {
-#         "m" => Rational(1, 1000),
-#         "dm" => Rational(1, 100),
-#         "cm" => Rational(1, 10),
-#         "mm" => Rational(1, 1),
-#       }
-#     }
-
-#     assert_equal expected, conversion_table
-
-#     conversion_table.values.map(&:values).flatten.each do |value|
-#       assert_instance_of Rational, value
-#     end
-#   end
-
-#   test "#to_h raises exception when there are cycles" do
-#     unit1 = Measured::Unit.new(:pallets, value: "1 liters")
-#     unit2 = Measured::Unit.new(:liters, value: "0.1 cases")
-#     unit3 = Measured::Unit.new(:cases, value: "0.1 pallets")
-
-#     assert_raises(Measured::CycleDetected) do
-#       Measured::ConversionTableBuilder.new([unit1, unit2, unit3]).to_h
-#     end
-#   end
-
-#   test "#cached? returns true if there's a cache" do
-#     builder = Measured::ConversionTableBuilder.new([Measured::Unit.new(:test)], cache: { class: AlwaysTrueCache })
-#     assert_predicate builder, :cached?
-#   end
-
-#   test "#cached? returns false if there is not a cache" do
-#     builder = Measured::ConversionTableBuilder.new([Measured::Unit.new(:test)])
-#     refute_predicate builder, :cached?
-#   end
-
-#   test "#write_cache pushes the generated table into the cache and writes it" do
-#     builder = Measured::ConversionTableBuilder.new([Measured::Unit.new(:test)], cache: { class: AlwaysTrueCache })
-#     AlwaysTrueCache.any_instance.expects(:exist?).returns(false)
-#     table = builder.to_h
-#     AlwaysTrueCache.any_instance.expects(:write).with(table).returns(123)
-#     assert_equal 123, builder.update_cache
-#   end
-# end
-
 class Measured::DynamicConversionTableBuilderTest < ActiveSupport::TestCase
-  test "#to_h returns expected nested hashes with BigDecimal conversion factors in a tiny data set" do
+  test "#to_h returns expected nested hashes in an indrect path" do
     conversion_table = Measured::DynamicConversionTableBuilder.new([
-      Measured::Unit.new(:C).to_dynamic,
-      Measured::Unit.new(:F, value: [
+      Measured::Unit.new(:mm),
+      Measured::Unit.new(:cm, value: [
         {
-          conversion: ->(c) { Rational(9,5) * c + 32 },
-          inverse_conversion: ->(f) { (f - 32) * Rational(5,9) },
-          description: '9 / 5 * C + 32',
+          conversion: ->(cm) { Rational(10,1) * cm },
+          inverse_conversion: ->(mm) { mm * Rational(1,10) },
+          description: '10 mm',
         },
-        'C'
+        "mm"
       ]),
+      Measured::Unit.new(:dm, value: "10 cm"),
+      Measured::Unit.new(:m, value: "10 dm"),
     ]).to_h
 
-    # {
-    #   "C" => {
-    #     "C" => ->(c) { c * (1/1) },
-    #     "F" =>  ->(c) { c * Rational(9,5) + 32 }
-    #   },
-    #   "F" => {
-    #     "F" => ->(f) { c * (1/1) },
-    #     "C" => ->(f) { (f - 32) * Rational(5,9) }
-    #   }
-    # }
-
-    # 0 Celsius = 32 Farenheit
-    # 45 Celsius = 113 Farenheit
-
-    assert conversion_table["C"]["C"].is_a?(Proc)
-    assert_equal Rational(1,1), conversion_table["C"]["C"].call(1)
-
-    assert conversion_table["F"]["F"].is_a?(Proc)
-    assert_equal Rational(1,1), conversion_table["F"]["F"].call(1)
-
-    assert conversion_table["C"]["F"].is_a?(Proc)
-    assert_equal Rational(0,1), conversion_table["C"]["F"].call(32)
-    assert_equal Rational(45,1), conversion_table["C"]["F"].call(113)
-
-    assert conversion_table["F"]["C"].is_a?(Proc)
-    assert_equal Rational(32,1), conversion_table["F"]["C"].call(0)
-    assert_equal Rational(113,1), conversion_table["F"]["C"].call(45)
+    [
+      ["m", "m", Rational(1,1)],
+      ["m", "dm", Rational(10,1)],
+      ["m", "cm", Rational(100,1)],
+      ["m", "mm", Rational(1000,1)],
+      ["dm", "m", Rational(1,10)],
+      ["dm", "dm", Rational(1,1)],
+      ["dm", "cm", Rational(10,1)],
+      ["dm", "mm", Rational(100,1)],
+      ["cm", "m", Rational(1,100)],
+      ["cm", "dm", Rational(1,10)],
+      ["cm", "cm", Rational(1,1)],
+      ["cm", "mm", Rational(10,1)],
+      ["mm", "m", Rational(1,1000)],
+      ["mm", "dm", Rational(1,100)],
+      ["mm", "cm", Rational(1,10)],
+      ["mm", "mm", Rational(1,1)]
+    ].each do |(to, from, ratio)|
+      assert conversion_table[to][from].is_a?(Proc)
+      assert_equal ratio, conversion_table[to][from].call(1)
+    end
   end
 end

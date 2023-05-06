@@ -11,6 +11,17 @@ module Measured
       @description = description
     end
 
+    def value
+      [
+        {
+          conversion: amount,
+          inverse_conversion: inverse_amount,
+          description: @description
+        },
+        unit
+      ]
+    end
+
     def dynamic?
       true
     end
@@ -59,7 +70,7 @@ module Measured
     def to_dynamic
       DynamicUnitConversion.new(
         amount: ->(x) { x * amount },
-        inverse_amount: ->(x) { x / amount },
+        inverse_amount: ->(x) { x * inverse_amount },
         unit: unit,
         description: to_s
       )

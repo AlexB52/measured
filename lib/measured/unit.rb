@@ -14,10 +14,15 @@ module Measured
     end
 
     def with(name: nil, unit_system: nil, aliases: nil, value: nil)
+      value ||= @unit_conversion.to_s
+      if dynamic?
+        value = @unit_conversion.value
+      end
+
       self.class.new(
         name || self.name,
         aliases: aliases || self.aliases,
-        value: value || @unit_conversion.to_s,
+        value: value,
         unit_system: unit_system || self.unit_system
       )
     end
@@ -28,6 +33,10 @@ module Measured
       else
         name
       end
+    end
+
+    def dynamic?
+      @unit_conversion.dynamic?
     end
 
     def to_dynamic
@@ -48,7 +57,7 @@ module Measured
         if names_comparison != 0
           names_comparison
         else
-          conversion_amount <=> other.conversion_amount
+          compared_value(conversion_amount) <=> compared_value(other.conversion_amount)
         end
       else
         name <=> other
@@ -65,6 +74,17 @@ module Measured
 
     def inverse_conversion_amount
       @unit_conversion.inverse_amount
+    end
+
+    private
+
+    def compared_value(conversion_amount)
+      case conversion_amount
+      when Proc
+        conversion_amount.call(1)
+      else
+        conversion_amount
+      end
     end
   end
 end
