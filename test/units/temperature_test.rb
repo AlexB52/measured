@@ -5,14 +5,14 @@ Measured::Temperature = Measured.build do
   unit :K, value: [
     {
       conversion: ->(k) { k - BigDecimal('273.15') },
-      inverse_conversion: ->(c) { c + BigDecimal('273.15') },
+      reverse_conversion: ->(c) { c + BigDecimal('273.15') },
       description: 'celsius + 273.15'
     }, 'C'], aliases: [:k, :kelvin]
 
   unit :F, value: [
     {
       conversion: ->(f) { (f-32) * Rational(5,9) },
-      inverse_conversion: ->(c) { c * Rational(9,5) + 32 },
+      reverse_conversion: ->(c) { c * Rational(9,5) + 32 },
       description: '9 * celsius / 5 + 32'
     }, 'C'], aliases: [:f, :farenheit]
 end

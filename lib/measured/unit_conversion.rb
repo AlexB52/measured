@@ -15,7 +15,7 @@ module Measured
       [
         {
           conversion: amount,
-          inverse_conversion: inverse_amount,
+          reverse_conversion: inverse_amount,
           description: @description
         },
         unit
@@ -96,7 +96,7 @@ module Measured
       when Hash
         DynamicUnitConversion.new(
           amount: tokens[0][:conversion],
-          inverse_amount: tokens[0][:inverse_conversion],
+          inverse_amount: tokens[0][:reverse_conversion],
           description: tokens[0][:description],
           unit: tokens[1].freeze
         )

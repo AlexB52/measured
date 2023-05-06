@@ -8,7 +8,7 @@ class Measured::DynamicConversionTableBuilderTest < ActiveSupport::TestCase
       Measured::Unit.new(:cm, value: [
         {
           conversion: ->(cm) { Rational(10,1) * cm },
-          inverse_conversion: ->(mm) { mm * Rational(1,10) },
+          reverse_conversion: ->(mm) { mm * Rational(1,10) },
           description: '10 mm',
         },
         "mm"

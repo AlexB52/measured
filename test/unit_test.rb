@@ -94,7 +94,7 @@ class Measured::DyanmicUnitTest < ActiveSupport::TestCase
     @unit = Measured::Unit.new(:Pie, value: [
       {
         conversion: ->(x) { x * Rational(10, 1) },
-        inverse_conversion: ->(x) { x * Rational(1,10) },
+        reverse_conversion: ->(x) { x * Rational(1,10) },
         description: 'some description'
       },
       'Cake'
