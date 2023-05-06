@@ -2,12 +2,13 @@
 
 module Measured
   class DynamicUnitConversion
-    attr_reader :amount, :unit
+    attr_reader :amount, :inverse_amount, :unit
 
-    def initialize(amount:, unit:, conversion_string: nil)
+    def initialize(amount:, inverse_amount:, unit:, description: nil)
       @amount = amount
+      @inverse_amount = inverse_amount
       @unit = unit
-      @conversion_string = conversion_string
+      @description = description
     end
 
     def dynamic?
@@ -19,13 +20,11 @@ module Measured
     end
 
     def to_s
-      @conversion_string
+      @description
     end
 
-    def inverse_amount
-      return unless amount
-
-      ->(x) { 1 / amount.call(x) }
+    def to_dynamic
+      self
     end
   end
 
@@ -56,10 +55,19 @@ module Measured
 
       (1 / amount)
     end
+
+    def to_dynamic
+      DynamicUnitConversion.new(
+        amount: ->(x) { x * amount },
+        inverse_amount: ->(x) { x / amount },
+        unit: unit,
+        description: to_s
+      )
+    end
   end
 
   class UnitConversion
-    def self.parse(tokens, conversion_string: nil)
+    def self.parse(tokens, description: nil)
       if tokens.nil?
         return StaticUnitConversion.new(amount: nil, unit: nil)
       end
@@ -74,11 +82,12 @@ module Measured
       end
 
       case tokens[0]
-      when Proc
+      when Hash
         DynamicUnitConversion.new(
-          amount: tokens[0],
-          unit: tokens[1].freeze,
-          conversion_string: conversion_string
+          amount: tokens[0][:conversion],
+          inverse_amount: tokens[0][:inverse_conversion],
+          description: tokens[0][:description],
+          unit: tokens[1].freeze
         )
       else
         StaticUnitConversion.new(
