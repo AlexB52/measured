@@ -1,105 +1,102 @@
 # frozen_string_literal: true
-module Measured
-  class ConversionTableBuilder
-    SELF_AMOUNT = Rational(1, 1)
 
-    attr_reader :units
+class Measured::ConversionTableBuilder
+  attr_reader :units
 
-    def initialize(units, cache: nil)
-      @units = units
-      cache ||= { class: Measured::Cache::Null }
-      @cache = cache[:class].new(*cache[:args])
-      after_initialize
-    end
+  def initialize(units, cache: nil)
+    @units = units
+    cache ||= { class: Measured::Cache::Null }
+    @cache = cache[:class].new(*cache[:args])
+    after_initialize
+  end
 
-    def to_h
-      return @cache.read if cached?
-      generate_table
-    end
+  def to_h
+    return @cache.read if cached?
+    generate_table
+  end
 
-    def update_cache
-      @cache.write(generate_table)
-    end
+  def update_cache
+    @cache.write(generate_table)
+  end
 
-    def cached?
-      @cache.exist?
-    end
+  def cached?
+    @cache.exist?
+  end
 
-    private
+  private
 
-    # Used for DynamicConversionTableBuilder
-    def after_initialize; end
+  # Used for DynamicConversionTableBuilder
+  def after_initialize; end
 
-    def generate_table
-      validate_no_cycles
+  def generate_table
+    validate_no_cycles
 
-      units.map(&:name).each_with_object({}) do |to_unit, table|
-        to_table = {to_unit => SELF_AMOUNT}
+    units.map(&:name).each_with_object({}) do |to_unit, table|
+      to_table = {to_unit => Rational(1, 1)}
 
-        table.each do |from_unit, from_table|
-          conversion = find_conversion(to: from_unit, from: to_unit)
-          to_table[from_unit] = conversion
-          from_table[to_unit] = 1 / conversion
-        end
-
-        table[to_unit] = to_table
-      end
-    end
-
-    def validate_no_cycles
-      ConversionTableValidator.validate_no_cycles(units)
-    end
-
-    def find_conversion(to:, from:)
-      conversion = find_direct_conversion_cached(to: to, from: from) || find_tree_traversal_conversion(to: to, from: from)
-
-      raise Measured::MissingConversionPath.new(from, to) unless conversion
-
-      conversion
-    end
-
-    def find_direct_conversion_cached(to:, from:)
-      @direct_conversion_cache ||= {}
-      @direct_conversion_cache[to] ||= {}
-
-      if @direct_conversion_cache[to].key?(from)
-         @direct_conversion_cache[to][from]
-      else
-        @direct_conversion_cache[to][from] = find_direct_conversion(to: to, from: from)
-      end
-    end
-
-    def find_direct_conversion(to:, from:)
-      units.each do |unit|
-        return unit.conversion_amount if unit.name == from && unit.conversion_unit == to
-        return unit.inverse_conversion_amount if unit.name == to && unit.conversion_unit == from
+      table.each do |from_unit, from_table|
+        conversion = find_conversion(to: from_unit, from: to_unit)
+        to_table[from_unit] = conversion
+        from_table[to_unit] = 1 / conversion
       end
 
-      nil
+      table[to_unit] = to_table
+    end
+  end
+
+  def validate_no_cycles
+    Measured::ConversionTableValidator.validate_no_cycles(units)
+  end
+
+  def find_conversion(to:, from:)
+    conversion = find_direct_conversion_cached(to: to, from: from) || find_tree_traversal_conversion(to: to, from: from)
+
+    raise Measured::MissingConversionPath.new(from, to) unless conversion
+
+    conversion
+  end
+
+  def find_direct_conversion_cached(to:, from:)
+    @direct_conversion_cache ||= {}
+    @direct_conversion_cache[to] ||= {}
+
+    if @direct_conversion_cache[to].key?(from)
+       @direct_conversion_cache[to][from]
+    else
+      @direct_conversion_cache[to][from] = find_direct_conversion(to: to, from: from)
+    end
+  end
+
+  def find_direct_conversion(to:, from:)
+    units.each do |unit|
+      return unit.conversion_amount if unit.name == from && unit.conversion_unit == to
+      return unit.inverse_conversion_amount if unit.name == to && unit.conversion_unit == from
     end
 
-    def find_tree_traversal_conversion(to:, from:)
-      traverse(from: from, to: to, units_remaining: units.map(&:name), amount: 1)
-    end
+    nil
+  end
 
-    def traverse(from:, to:, units_remaining:, amount:)
-      units_remaining = units_remaining - [from]
+  def find_tree_traversal_conversion(to:, from:)
+    traverse(from: from, to: to, units_remaining: units.map(&:name), amount: 1)
+  end
 
-      units_remaining.each do |name|
-        conversion = find_direct_conversion_cached(from: from, to: name)
+  def traverse(from:, to:, units_remaining:, amount:)
+    units_remaining = units_remaining - [from]
 
-        if conversion
-          new_amount = amount * conversion
-          if name == to
-            return new_amount
-          else
-            result = traverse(from: name, to: to, units_remaining: units_remaining, amount: new_amount)
-            return result if result
-          end
+    units_remaining.each do |name|
+      conversion = find_direct_conversion_cached(from: from, to: name)
+
+      if conversion
+        new_amount = amount * conversion
+        if name == to
+          return new_amount
+        else
+          result = traverse(from: name, to: to, units_remaining: units_remaining, amount: new_amount)
+          return result if result
         end
       end
-
-      nil
     end
+
+    nil
   end
 end
