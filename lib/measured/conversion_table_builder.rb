@@ -1,5 +1,4 @@
 # frozen_string_literal: true
-
 class Measured::ConversionTableBuilder
   attr_reader :units
 
@@ -45,7 +44,20 @@ class Measured::ConversionTableBuilder
   end
 
   def validate_no_cycles
-    Measured::ConversionTableValidator.validate_no_cycles(units)
+    graph = units.select { |unit| unit.conversion_unit.present? }.group_by { |unit| unit.name }
+    validate_acyclic_graph(graph, from: graph.keys[0])
+  end
+
+  # This uses a depth-first search algorithm: https://en.wikipedia.org/wiki/Depth-first_search
+  def validate_acyclic_graph(graph, from:, visited: [])
+    graph[from]&.each do |edge|
+      adjacent_node = edge.conversion_unit
+      if visited.include?(adjacent_node)
+        raise Measured::CycleDetected.new(edge)
+      else
+        validate_acyclic_graph(graph, from: adjacent_node, visited: visited + [adjacent_node])
+      end
+    end
   end
 
   def find_conversion(to:, from:)
