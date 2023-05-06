@@ -1,44 +1,53 @@
 # frozen_string_literal: true
 
 module Measured
-  class UnitConversion
-    attr_reader :amount, :inverse_amount, :unit
+  class DynamicUnitConversion
+    attr_reader :amount, :unit
 
-    def initialize(value, conversion_string: nil)
-      @value = value
-      @amount, @unit = parse_value(value) if value
+    def initialize(amount:, unit:, conversion_string: nil)
+      @amount = amount
+      @unit = unit
       @conversion_string = conversion_string
     end
 
     def to_s
-      return @conversion_string if @conversion_string
-      return unless amount && unit
-
-      case amount
-      when Proc
-      else
-        "#{amount} #{unit}"
-      end
-
+      @conversion_string
     end
 
     def inverse_amount
-      return @inverse_amount if instance_variable_defined?("@inverse_amount")
       return unless amount
 
-      @inverse_amount ||= begin
-        case amount
-        when Proc
-          ->(x) { 1 / amount.call(x) }
-        else
-          (1 / amount)
-        end
-      end
+      ->(x) { 1 / amount.call(x) }
+    end
+  end
+
+  class StaticUnitConversion
+    attr_reader :amount, :unit
+
+    def initialize(amount:, unit:)
+      @amount = amount
+      @unit = unit
     end
 
-    private
+    def to_s
+      return unless amount && unit
 
-    def parse_value(tokens)
+      "#{amount} #{unit}"
+    end
+
+    def inverse_amount
+      return unless amount
+
+      (1 / amount)
+    end
+  end
+
+  class UnitConversion
+    def self.parse(tokens, conversion_string: nil)
+      if tokens.nil?
+        return StaticUnitConversion.new(amount: nil, unit: nil)
+      end
+
       case tokens
       when String
         tokens = Measured::Parser.parse_string(tokens)
@@ -50,9 +59,16 @@ module Measured
 
       case tokens[0]
       when Proc
-        [tokens[0], tokens[1].freeze]
+        DynamicUnitConversion.new(
+          amount: tokens[0],
+          unit: tokens[1].freeze,
+          conversion_string: conversion_string
+        )
       else
-        [tokens[0].to_r, tokens[1].freeze]
+        StaticUnitConversion.new(
+          amount: tokens[0].to_r,
+          unit: tokens[1].freeze
+        )
       end
     end
   end

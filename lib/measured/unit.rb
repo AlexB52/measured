@@ -9,7 +9,7 @@ module Measured
       @name = name.to_s.freeze
       @aliases = aliases.map(&:to_s).map(&:freeze).freeze
       @names = ([@name] + @aliases).sort!.freeze
-      @unit_conversion = UnitConversion.new(value)
+      @unit_conversion = UnitConversion.parse(value)
       @unit_system = unit_system
     end
 

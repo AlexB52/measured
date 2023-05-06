@@ -3,35 +3,35 @@ require "test_helper"
 
 class Measured::UnitConversionTest < ActiveSupport::TestCase
   setup do
-    @unit_conversion = Measured::UnitConversion.new("10 Cake")
+    @unit_conversion = Measured::UnitConversion.parse("10 Cake")
   end
 
   test "#initialize parses out the unit and the number part" do
     assert_equal 10, @unit_conversion.amount
     assert_equal "Cake", @unit_conversion.unit
 
-    unit_conversion = Measured::UnitConversion.new(["5.5", "sweets"])
+    unit_conversion = Measured::UnitConversion.parse(["5.5", "sweets"])
     assert_equal BigDecimal("5.5"), unit_conversion.amount
     assert_equal "sweets", unit_conversion.unit
 
-    unit_conversion = Measured::UnitConversion.new("1/3 bitter pie")
+    unit_conversion = Measured::UnitConversion.parse("1/3 bitter pie")
     assert_equal Rational(1, 3), unit_conversion.amount
     assert_equal "bitter pie", unit_conversion.unit
   end
 
   test "#initialize raises if the format of the value is incorrect" do
     assert_raises Measured::UnitError do
-      Measured::UnitConversion.new("hello")
+      Measured::UnitConversion.parse("hello")
     end
 
     assert_raises Measured::UnitError do
-      Measured::UnitConversion.new("123456")
+      Measured::UnitConversion.parse("123456")
     end
   end
 
   test "#to_s returns an expected string" do
-    assert_nil Measured::UnitConversion.new(nil).to_s
-    assert_equal "1/2 sweet", Measured::UnitConversion.new("0.5 sweet").to_s
+    assert_nil Measured::UnitConversion.parse(nil).to_s
+    assert_equal "1/2 sweet", Measured::UnitConversion.parse("0.5 sweet").to_s
   end
 
   test "#inverse_amount returns 1/amount" do
@@ -39,13 +39,13 @@ class Measured::UnitConversionTest < ActiveSupport::TestCase
   end
 
   test "#inverse_amount handles nil for base unit" do
-    assert_nil Measured::UnitConversion.new(nil).inverse_amount
+    assert_nil Measured::UnitConversion.parse(nil).inverse_amount
   end
 end
 
-class Measured::UnitConversionProcValueTest < ActiveSupport::TestCase
+class Measured::DynamicUnitConversionTest < ActiveSupport::TestCase
   setup do
-    @unit_conversion = Measured::UnitConversion.new([proc { |x| x * Rational(10, 1) }, "sweets"])
+    @unit_conversion = Measured::UnitConversion.parse([proc { |x| x * Rational(10, 1) }, "sweets"])
   end
 
   test "#initialize parses out the unit and the number part" do
@@ -55,15 +55,16 @@ class Measured::UnitConversionProcValueTest < ActiveSupport::TestCase
 
   test "#to_s returns an expected string" do
     assert_nil @unit_conversion.to_s
-    unit_conversion = Measured::UnitConversion.new([proc { |x| x * Rational(10, 1) }, "sweets"], conversion_string: '10 sweets')
+
+    unit_conversion = Measured::UnitConversion.parse(
+      [proc { |x| x * Rational(10, 1) }, "sweets"],
+      conversion_string: '10 sweets'
+    )
+
     assert_equal '10 sweets', unit_conversion.to_s
   end
 
   test "#inverse_amount returns 1/amount" do
     assert_equal 0.1, @unit_conversion.inverse_amount.call(1)
-  end
-
-  test "#inverse_amount handles nil for base unit" do
-    assert_nil Measured::UnitConversion.new(nil).inverse_amount
   end
 end
