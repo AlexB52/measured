@@ -72,7 +72,7 @@ class Measured::DynamicUnitConversionTest < ActiveSupport::TestCase
     @unit_conversion = Measured::UnitConversion.parse([
       {
         conversion: proc { |x| x * Rational(10, 1) },
-        inverse_conversion: proc { |x| x * Rational(1, 10) }
+        reverse_conversion: proc { |x| x * Rational(1, 10) }
       },
       "sweets"
     ])
@@ -94,7 +94,7 @@ class Measured::DynamicUnitConversionTest < ActiveSupport::TestCase
     unit_conversion = Measured::UnitConversion.parse([
       {
         conversion: proc { |x| x * Rational(10, 1) },
-        inverse_conversion: proc { |x| x * Rational(1, 10) },
+        reverse_conversion: proc { |x| x * Rational(1, 10) },
         description: 'some description'
       },
       "sweets"
