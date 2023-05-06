@@ -30,6 +30,11 @@ module Measured
       end
     end
 
+    def to_dynamic
+      @unit_conversion = @unit_conversion.to_dynamic
+      self
+    end
+
     def inspect
       pieces = [name]
       pieces << "(#{aliases.join(", ")})" if aliases.any?
