@@ -6,6 +6,11 @@ class Measured::UnitConversionTest < ActiveSupport::TestCase
     @unit_conversion = Measured::UnitConversion.parse("10 Cake")
   end
 
+  test "#static? & #dynamic?" do
+    refute @unit_conversion.dynamic?
+    assert @unit_conversion.static?
+  end
+
   test "#initialize parses out the unit and the number part" do
     assert_equal 10, @unit_conversion.amount
     assert_equal "Cake", @unit_conversion.unit
@@ -46,6 +51,11 @@ end
 class Measured::DynamicUnitConversionTest < ActiveSupport::TestCase
   setup do
     @unit_conversion = Measured::UnitConversion.parse([proc { |x| x * Rational(10, 1) }, "sweets"])
+  end
+
+  test "#static? & #dynamic?" do
+    assert @unit_conversion.dynamic?
+    refute @unit_conversion.static?
   end
 
   test "#initialize parses out the unit and the number part" do

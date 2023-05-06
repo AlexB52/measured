@@ -10,6 +10,14 @@ module Measured
       @conversion_string = conversion_string
     end
 
+    def dynamic?
+      true
+    end
+
+    def static?
+      false
+    end
+
     def to_s
       @conversion_string
     end
@@ -27,6 +35,14 @@ module Measured
     def initialize(amount:, unit:)
       @amount = amount
       @unit = unit
+    end
+
+    def dynamic?
+      false
+    end
+
+    def static?
+      true
     end
 
     def to_s
